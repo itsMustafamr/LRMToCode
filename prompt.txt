@@ -1,0 +1,10 @@
+Design a rectangular mounting plate 100 mm × 60 mm × 5 mm with four 6 mm through‑holes centered 10 mm from each corner.
+Create an L‑bracket for a 12 mm rod mount: vertical flange 50 mm tall, horizontal flange 30 mm deep, wall thickness 3 mm.
+Generate a cylindrical gear housing: inner diameter 40 mm, outer diameter 60 mm, height 20 mm, with a 5 mm lip at the top.
+Make a snap‑fit box: base 80 mm × 50 mm × 30 mm, lid with 2 mm snap tabs on the long sides.
+Extrude a 2D profile of a hexagon with 20 mm side length to a height of 10 mm, then subtract a concentric cylinder of radius 8 mm.
+Design a parametric drawer handle: total length 120 mm, grip height 15 mm, mount holes 5 mm diameter, plate thickness 4 mm.
+Create a revolved vase: 2D spline profile through points (0,0),(10,20),(5,40),(0,60), revolve 360° around the Y‑axis.
+Generate a phone stand: angled back support at 70°, base 100 mm × 80 mm × 5 mm, cradle width 70 mm.
+Design a snap‑together puzzle piece: 30 mm square tile with interlocking tabs on all four sides, tab width 5 mm, depth 3 mm.
+Make a cable clip: semicircular clamp radius 8 mm, wall thickness 2 mm, base pad 20 mm × 10 mm × 3 mm with screw hole.
