@@ -24,6 +24,13 @@
 
     <input type="text" id="inputText" placeholder="e.g. An adjustable phone stand">
     <br>
+    <select id="providerSelect" style="padding:10px;margin-top:10px">
+        <option value="gpt" selected>OpenAI GPT</option>
+        <option value="claude">Anthropic Claude</option>
+        <option value="gemini">Google Gemini</option>
+        <option value="together">Together / DeepSeek</option>
+    </select>
+    <br>
     <button id="submitButton">Generate</button>
     <button id="resetButton">Reset</button>
 
@@ -50,7 +57,8 @@
             if(!text){alert('Please enter a prompt.');return;}
             $('#loadingIndicator').show();
             $('#generatedImage,#generatedText,#downloadLink,#codeArea').hide();
-            $.post('/submit',{text:text},function(res){
+            const provider=$('#providerSelect').val();
+            $.post('/submit',{text:text,provider:provider},function(res){
                 $('#loadingIndicator').hide();
                 if(res.error){alert('Error: '+res.error);if(res.code){$('#generatedCode').text(res.code);$('#codeArea').show();}return;}
                 if(res.image&&res.filename){const imgUrl='{{ url_for("static",filename="images/") }}'+res.image;$('#generatedImage').attr('src',imgUrl).show();$('#generatedText').show();$('#downloadLink').attr('href','/download/'+res.filename).show();}
