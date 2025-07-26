@@ -97,6 +97,12 @@
         <p id="generatedText" style="display: none;">The following is a 2D preview of the generated model. Download the SCAD code and render it on OpenSCAD to get the 3D model.</p>
         <img src="" alt="Generated Image" id="generatedImage" style="display: none;">
     </div>
+    
+    <div id="codeArea" style="display: none; margin-top: 30px; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <h3>Generated OpenSCAD Code</h3>
+        <p id="sourceInfo" style="color: #666; font-style: italic; margin-bottom: 10px;"></p>
+        <pre id="generatedCode" style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd;"></pre>
+    </div>
 
 
     <div id="loadingIndicator">Loading...</div>
@@ -112,19 +118,44 @@
                 $('#generatedImage').hide();
                 $('#generatedText').hide();
                 $('#downloadLink').hide();
+                $('#codeArea').hide();
 
                 $.post('/submit', { text: text, toggleRag: toggleRag }, function(response) {
-                    var imageUrl = "{{ url_for('static', filename='images/') }}" + response.image;
-                    $('#generatedImage').attr('src', imageUrl).show();
-                    $('#downloadButton').show();
-                    $('#generatedText').show();
-                    // Set the download link's href attribute and show it
-                    $('#downloadLink').attr('href', `/download/${response.filename}`).show();
-
-
-
                     // Hide loading indicator
-                    $('#loadingIndicator').hide(); 
+                    $('#loadingIndicator').hide();
+                    
+                    if (response.error) {
+                        alert('Error: ' + response.error);
+                        // Still show code if available even on error
+                        if (response.code) {
+                            $('#generatedCode').text(response.code);
+                            $('#sourceInfo').text('Source: ' + (response.source || 'Unknown'));
+                            $('#codeArea').show();
+                        }
+                        return;
+                    }
+                    
+                    if (response.image && response.filename) {
+                        var imageUrl = "{{ url_for('static', filename='images/') }}" + response.image;
+                        $('#generatedImage').attr('src', imageUrl).show();
+                        $('#downloadButton').show();
+                        $('#generatedText').show();
+                        // Set the download link's href attribute and show it
+                        $('#downloadLink').attr('href', `/download/${response.filename}`).show();
+                    } else {
+                        alert('Error: Failed to generate image');
+                    }
+                    
+                    // Always show the generated code if available
+                    if (response.code) {
+                        $('#generatedCode').text(response.code);
+                        $('#sourceInfo').text('Source: ' + (response.source || 'Unknown'));
+                        $('#codeArea').show();
+                    }
+                    
+                }).fail(function() {
+                    $('#loadingIndicator').hide();
+                    alert('Error: Server communication failed');
                 });
             });
 
@@ -134,6 +165,7 @@
                 $('#downloadLink').hide();
                 $('#loadingIndicator').hide();
                 $('#generatedText').hide();
+                $('#codeArea').hide();
                 $('#toggleRag').prop('checked', false);
             });
         });

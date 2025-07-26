@@ -55,11 +55,36 @@ def query(request, toggleRag):
     prompt = f"Create the OpenSCAD code to generate the 3D model for a {request}. Answer ONLY with the code, no comments or explanations.\n"
     if toggleRag == "on":
         # for rag:
-        answ = query_engine.query(prompt)
-        return answ.response
+        try:
+            answ = query_engine.query(prompt)
+            print(f"RAG response: {answ.response}")
+            if answ.response and answ.response.strip():
+                return answ.response, "RAG"
+            else:
+                print("RAG returned empty response, falling back to OpenAI")
+                # Fallback to OpenAI if RAG returns empty
+                response = client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt},
+                    ]
+                )
+                return response.choices[0].message.content, "OpenAI (RAG fallback)"
+        except Exception as e:
+            print(f"RAG query failed: {e}")
+            # Fallback to OpenAI if RAG fails
+            response = client.chat.completions.create(
+                model="gpt-4o-latest",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt},
+                ]
+            )
+            return response.choices[0].message.content, "OpenAI (RAG error fallback)"
     else:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
@@ -67,7 +92,7 @@ def query(request, toggleRag):
             )
         
         answ = response.choices[0].message.content
-        return answ
+        return answ, "OpenAI"
     
 
     
@@ -84,48 +109,53 @@ def submit():
     text = request.form['text']
     toggleRag = request.form['toggleRag']
     
-    answer = query(text, toggleRag)
-    print(answer)
+    try:
+        answer, source = query(text, toggleRag)
+        print(f"Generated answer: {answer}")
+        print(f"Source: {source}")
 
-    if "```" in answer:
-        answer = answer.split("```")[1]
-    elif "`" in answer:
-        answer = answer.split("`")[1]
+        if not answer or not answer.strip():
+            return jsonify({'error': 'Failed to generate OpenSCAD code', 'image': '', 'filename': '', 'code': '', 'source': ''})
 
+        if "```" in answer:
+            answer = answer.split("```")[1]
+        elif "`" in answer:
+            answer = answer.split("`")[1]
 
+        answer = re.sub(r'openscad', '', answer, flags=re.IGNORECASE)
 
-    answer = re.sub(r'openscad', '', answer, flags=re.IGNORECASE)
+        # save the scad file with the timestamp as the filename
+        curr_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        scad_path = os.path.join("scad_scripts", curr_timestamp + ".scad")
 
-    # save the scad file with the timestamp as the filename
-    curr_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    scad_path = os.path.join("scad_scripts", curr_timestamp + ".scad")
+        # save a scad file with the answer
+        os.makedirs(os.path.dirname(scad_path), exist_ok=True)
+        # ensure the static/images directory exists for output images
+        os.makedirs(os.path.join("static", "images"), exist_ok=True)
+        with open(scad_path, 'w') as f:
+            f.write(answer)
+        
+        # render the scad file
+        # png
+        osr = OpenScadRunner(scad_path, f"static/images/{curr_timestamp}.png", render_mode=RenderMode.preview, imgsize=(800,600))
 
-    # save a scad file with the answer
-    os.makedirs(os.path.dirname(scad_path), exist_ok=True)
-    # ensure the static/images directory exists for output images
-    os.makedirs(os.path.join("static", "images"), exist_ok=True)
-    with open(scad_path, 'w') as f:
-        f.write(answer)
-    # render the scad file
-    # png
-    osr = OpenScadRunner(scad_path, f"static/images/{curr_timestamp}.png", render_mode=RenderMode.preview, imgsize=(800,600))
+        print(f"Timestamp: {curr_timestamp}")
+        print(f"SCAD path: {scad_path}")
 
+        # gif
+        # osr = OpenScadRunner(filename + ".scad", f"static/images/{filename}.gif", imgsize=(320,200), animate=36, animate_duration=200)
 
-    print(curr_timestamp)
-    print(scad_path)
-
-    # gif
-    # osr = OpenScadRunner(filename + ".scad", f"static/images/{filename}.gif", imgsize=(320,200), animate=36, animate_duration=200)
-
-
-    osr.run()
+        osr.run()
+        
+        if osr.good():
+            return jsonify({'image': f"{curr_timestamp}.png", 'filename': curr_timestamp, 'code': answer, 'source': source})
+        else:
+            # Return error but with empty image and filename fields for frontend compatibility
+            return jsonify({'error': 'OpenSCAD rendering failed.', 'image': '', 'filename': '', 'code': answer, 'source': source})
     
-
-    if osr.good():
-        return jsonify({'image': f"{curr_timestamp}.png", 'filename': curr_timestamp})
-    else:
-        # Fallback generic message; OpenScadRunner may not expose an error attribute
-        return jsonify({'error': 'OpenSCAD rendering failed.'})
+    except Exception as e:
+        print(f"Error in submit: {e}")
+        return jsonify({'error': f'Server error: {str(e)}', 'image': '', 'filename': '', 'code': '', 'source': ''})
 
 
 
