@@ -2,3 +2,5 @@ keys.json
 .vscode
 sr_file.ipynb
 main.py
+llm_to_cad/scad_scripts/
+llm_to_cad/static/images/
