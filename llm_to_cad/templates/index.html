@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM ➜ OpenSCAD</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;text-align:center;margin-top:50px}
+        #inputText{padding:10px;width:320px;margin-bottom:20px}
+        #submitButton,#resetButton{padding:10px 20px;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-top:10px}
+        #submitButton{background:#4CAF50}
+        #resetButton{background:#f44336;margin-left:10px}
+        #submitButton:hover{background:#45a049}
+        #resetButton:hover{background:#d22e19}
+        #imageArea{margin-top:30px}
+        img{max-width:100%;height:auto}
+        #loadingIndicator{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);color:#fff;text-align:center;line-height:100vh;font-size:1.4rem}
+    </style>
+</head>
+<body>
+    <h1>LLM → OpenSCAD</h1>
+    <p>Enter a design prompt and the model will generate OpenSCAD code plus a 2-D preview.</p>
+
+    <input type="text" id="inputText" placeholder="e.g. An adjustable phone stand">
+    <br>
+    <button id="submitButton">Generate</button>
+    <button id="resetButton">Reset</button>
+
+    <div style="margin-top:30px">
+        <a id="downloadLink" href="" style="display:none;padding:10px 20px;background:#4CAF50;color:#fff;border-radius:4px;text-decoration:none">Download SCAD</a>
+    </div>
+
+    <div id="imageArea">
+        <p id="generatedText" style="display:none">Below is a 2-D preview. Download the SCAD file to inspect it in OpenSCAD.</p>
+        <img id="generatedImage" src="" alt="Preview" style="display:none">
+    </div>
+
+    <div id="codeArea" style="display:none;margin-top:30px;text-align:left;max-width:800px;margin-left:auto;margin-right:auto">
+        <h3>Generated Code</h3>
+        <pre id="generatedCode" style="background:#f5f5f5;padding:15px;border-radius:5px;overflow-x:auto;border:1px solid #ddd"></pre>
+    </div>
+
+    <div id="loadingIndicator">Generating…</div>
+
+    <script>
+    $(function(){
+        $('#submitButton').click(function(){
+            const text=$('#inputText').val().trim();
+            if(!text){alert('Please enter a prompt.');return;}
+            $('#loadingIndicator').show();
+            $('#generatedImage,#generatedText,#downloadLink,#codeArea').hide();
+            $.post('/submit',{text:text},function(res){
+                $('#loadingIndicator').hide();
+                if(res.error){alert('Error: '+res.error);if(res.code){$('#generatedCode').text(res.code);$('#codeArea').show();}return;}
+                if(res.image&&res.filename){const imgUrl='{{ url_for("static",filename="images/") }}'+res.image;$('#generatedImage').attr('src',imgUrl).show();$('#generatedText').show();$('#downloadLink').attr('href','/download/'+res.filename).show();}
+                if(res.code){$('#generatedCode').text(res.code);$('#codeArea').show();}
+            }).fail(function(){
+                $('#loadingIndicator').hide();alert('Server communication failed');
+            });
+        });
+        $('#resetButton').click(function(){
+            $('#inputText').val('');$('#generatedImage,#downloadLink,#generatedText,#codeArea').hide();
+        });
+    });
+    </script>
+</body>
+</html> 
